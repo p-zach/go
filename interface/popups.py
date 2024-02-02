@@ -6,7 +6,7 @@
 import sys
 import tkinter as tk
 from tkinter import ttk
-from player import PlayerType
+from players.player import PlayerType
 from go import GameParams
 
 def get_game_params():
@@ -109,7 +109,7 @@ def create_themed_window(title, width=None, height=None):
     frame = ttk.Frame(root, width=width, height=height)
     frame.pack(fill="both", expand=False)
 
-    root.tk.call("source", "azure.tcl")
+    root.tk.call("source", "interface/azure.tcl")
     root.tk.call("set_theme", "light")
 
     return root, frame

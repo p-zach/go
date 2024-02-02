@@ -3,11 +3,11 @@
 # Program entry point for Go game.
 # Author: Porter Zach
 
-import graphics
+import interface.graphics as graphics
 import game
-from player import PlayerType
+from players.player import PlayerType
 from dataclasses import dataclass
-from popups import *
+from interface.popups import *
 
 class Go:
     def __init__(self):

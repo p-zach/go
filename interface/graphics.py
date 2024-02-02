@@ -3,8 +3,8 @@
 # Classes and functions for graphical interfacing in Go game.
 # Author: Porter Zach
 
-from graphics_utils import *
-from graphics_constants import *
+from .graphics_utils import *
+from .graphics_constants import *
 from tkinter import Event
 
 class Graphics(Clickable):

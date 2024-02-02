@@ -3,7 +3,7 @@
 # Constants for graphics in Go game.
 # Author: Porter Zach
 
-from graphics_utils import format_color
+from .graphics_utils import format_color
 
 GRID_OFFSET_X = 20
 GRID_OFFSET_Y = 20
