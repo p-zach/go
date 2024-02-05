@@ -7,7 +7,8 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from players.player import PlayerType
-from go import GameParams
+from game import GameParams
+from .graphics_utils import create_themed_window
 
 def get_game_params():
     root, frame = create_themed_window("Go Settings", width=300, height=200)
@@ -22,9 +23,9 @@ def get_game_params():
     root.protocol('WM_DELETE_WINDOW', quit)
 
     # Define dropdown options
-    size_options = {"9x9": (9, 9), 
-                    "13x13": (13, 13), 
-                    "19x19": (19, 19)}
+    size_options = {"9x9": 9, 
+                    "13x13": 13, 
+                    "19x19": 19}
     p1_options = {"Play locally": PlayerType.HUMAN | PlayerType.LOCAL,
                   "Play locally as AI": PlayerType.AI | PlayerType.LOCAL,
                   "Host an online game": PlayerType.HUMAN | PlayerType.SERVER,
@@ -66,19 +67,19 @@ def get_game_params():
             child.configure(state="normal")
 
     # Create player 1 dropdown
-    p1_string = tk.StringVar(options_frame_p1, value="")     
+    p1_string = tk.StringVar(options_frame_p1)     
     options_list_p1 = list(p1_options.keys())
     ttk.OptionMenu(options_frame_p1, p1_string, options_list_p1[0], *options_list_p1, command=update_options).pack(side="right")
     ttk.Label(options_frame_p1, text="Player 1:  ").pack(side="left")
 
     # Create player 2 dropdown
-    p2_string = tk.StringVar(options_frame_p2, value="")     
+    p2_string = tk.StringVar(options_frame_p2)     
     options_list_p2 = list(p2_options.keys())
     ttk.OptionMenu(options_frame_p2, p2_string, options_list_p2[0], *options_list_p2).pack(side="right")
     ttk.Label(options_frame_p2, text="Player 2:  ").pack(side="left")
 
     # Create size dropdown
-    size_string = tk.StringVar(options_frame_size, value="9x9")     
+    size_string = tk.StringVar(options_frame_size)     
     options_list_size = list(size_options.keys())
     ttk.OptionMenu(options_frame_size, size_string, options_list_size[0], *options_list_size).pack(side="right")
     ttk.Label(options_frame_size, text="Board size:  ").pack(side="left")
@@ -100,16 +101,4 @@ def get_game_params():
     elif p1 & PlayerType.CLIENT:
         p2 = PlayerType.UNK | PlayerType.SERVER
 
-    return GameParams(*size, p1, p2)
-
-def create_themed_window(title, width=None, height=None):
-    root = tk.Tk()
-    root.title(title) 
-    
-    frame = ttk.Frame(root, width=width, height=height)
-    frame.pack(fill="both", expand=False)
-
-    root.tk.call("source", "interface/azure.tcl")
-    root.tk.call("set_theme", "light")
-
-    return root, frame
+    return GameParams(size, p1, p2)
