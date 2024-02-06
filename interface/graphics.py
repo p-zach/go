@@ -27,7 +27,7 @@ class Graphics(Clickable):
         # Guide outlines on hover
         self.motion_ids = []
 
-        enter_graphics()
+        self.frozen = False
 
     def draw_board(self):
         board_width_pixels = GRID_UNIT_SIZE * (self.board_size - 2) + GRID_BOX_SIZE
@@ -67,6 +67,8 @@ class Graphics(Clickable):
     def make_buttons(self):
         frame = get_frame()
 
+        passb = ttk.Button(frame, text="Pass", command=self.pass_turn)
+        passb.place(x=self.window_width+PASS_BUTTON_X, y=PASS_BUTTON_Y)
         resign = ttk.Button(frame, text="Resign", command=self.request_resign)
         resign.place(x=self.window_width+RESIGN_BUTTON_X, y=self.window_height+RESIGN_BUTTON_Y)
 
@@ -78,6 +80,10 @@ class Graphics(Clickable):
         # backward.place(x=self.window_width+BACKWARD_BUTTON_X, y=self.window_height+BACKWARD_BUTTON_Y)
         # fb = ttk.Button(frame, text="<<", command=lambda: self.state_change(-1, True))
         # fb.place(x=self.window_width+FB_BUTTON_X, y=self.window_height+FB_BUTTON_Y)
+
+    def pass_turn(self):
+        self.controller.pass_turn()
+        self.redraw_board(self.controller.get_board())
 
     def request_resign(self):
         # TODO: Ask go.py to present user with "Are you sure you want to resign?"
@@ -108,6 +114,9 @@ class Graphics(Clickable):
                     self.drawn_stones.append(id)
 
     def left_click(self, event: Event):
+        if self.frozen:
+            return
+        
         # Only consider clicks on the canvas
         if type(event.widget) is tk.Canvas:
             # Get board position of mouse if it is hovering over the canvas
@@ -115,9 +124,15 @@ class Graphics(Clickable):
             if pos is None:
                 return
             # Try to add a stone
-            self.add_stone(pos[0], pos[1])
+            self.add_stone(*pos)
 
     def motion(self, event: Event):
+        if self.frozen:
+            # Remove previous guide outlines if any exists
+            while len(self.motion_ids) > 0:
+                delete(self.motion_ids.pop())
+            return
+        
         # Only consider motion on the canvas
         if type(event.widget) is tk.Canvas:
             # Remove previous guide outlines if any exists
@@ -150,3 +165,14 @@ class Graphics(Clickable):
     
     def double_click(self, event: Event):
         pass
+
+    def start(self):
+        enter_graphics()
+
+    def freeze(self):
+        self.frozen = True
+        for child in get_frame().winfo_children():
+            child.config(state='disable')
+
+    def destroy(self):
+        destroy_window()

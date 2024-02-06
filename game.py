@@ -19,7 +19,7 @@ class Stone(IntEnum):
 
 NEIGHBORHOOD = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
-# TODO: Optimize redundant searches
+# TODO: Optimize redundant searches and extract various BFS implementations into single function
 
 class Game:
     def __init__(self, controller, size: int):
@@ -31,6 +31,13 @@ class Game:
         self._turn = Stone.BLACK
 
         self._states = [board_to_string(self._size, self._turn, self._board)]
+        self._passed_last = False
+
+        # This implementation chooses to use a constant komi (White compensation)
+        # following the argument that as board size decreases, komi should
+        # decrease (fewer tiles to gain points from) and also increase (going 
+        # first provides a larger lead).
+        self._komi = 6.5
 
     # Gets an encoding of the board state
     def get_board(self) -> str:
@@ -51,6 +58,66 @@ class Game:
             self._place(x, y)
             return True
         return False
+    
+    # Get the winner of the board and each player's score.
+    # Under Chinese rules of area scoring:
+    # A player's score is the number of stones that the player has on the
+    # board, plus the number of empty intersections surrounded by that player's
+    # stones. 
+    # Note: Chinese and Japanese rules usually return the same score. 
+    # If the results are different, it almost never changes the game's outcome.
+    # Returns the player that won (Black (0) or White (1)) and each player's score.
+    def score(self) -> (int, int, int):
+        scores = [0, self._komi]
+        considered = set()
+
+        def consider(pos):
+            if pos in considered:
+                return
+            considered.add(pos)
+            color = self._board[pos[0]][pos[1]]
+            if color is not None:
+                scores[color] += 1
+                return
+            # Perform BFS to see if the group of empty tiles is 
+            # bounded entirely by 1 color
+            queue = [pos]
+            count = 1
+            hopeful_color = None
+            failed = False
+            while len(queue) != 0:
+                p = queue.pop(0)
+                for neighbor in _neighbors(self._board, *p):
+                    nabe_color = self._board[neighbor[0]][neighbor[1]]
+                    if nabe_color is None:
+                        if neighbor not in considered:
+                            # Found another empty tile. Continue BFS
+                            considered.add(neighbor)
+                            queue.append(neighbor)
+                            count += 1
+                    elif hopeful_color is None:
+                        # Found the first non-empty tile. Consider it as the hopeful
+                        # color surrounding the entire territory.
+                        hopeful_color = nabe_color
+                    elif nabe_color != hopeful_color:
+                        # Found a neighbor different to original hopeful color.
+                        # No singly-bounded territory here; ignore tiles of this group.
+                        failed = True
+            if hopeful_color is not None and not failed:
+                scores[hopeful_color] += count
+
+        for x in range(self._size):
+            for y in range(self._size):
+                consider((x, y))
+
+        return scores.index(max(scores)), *scores
+    
+    def pass_turn(self):
+        if self._passed_last:
+            return True
+        self._turn = 1 - self._turn
+        self._passed_last = True
+        return False
 
     # Place a stone at the given coordinates
     def _place(self, x: int, y: int):
@@ -59,16 +126,13 @@ class Game:
         self._update_board(x, y)
         self._turn = 1 - self._turn
         self._states.append(board_to_string(self._size, self._turn, self._board))
+        self._passed_last = False
 
     # Update the board in the neighborhood of the stone placed at x, y.
     def _update_board(self, x: int, y: int):
         color = self._board[x][y]
         # For all 4 neighbors,
-        for dir in NEIGHBORHOOD:
-            neighbor = (x + dir[0], y + dir[1])
-            # Ignore if not in bounds
-            if not self._in_bounds(*neighbor):
-                continue
+        for neighbor in _neighbors(self._board, x, y):
             neighbor_color = self._board[neighbor[0]][neighbor[1]]
             # If the neighbor is a different color,
             if neighbor_color is not None and color != neighbor_color:
@@ -95,15 +159,11 @@ class Game:
         while len(queue) != 0:
             stone = queue.pop(0)
             stone_color = self._board[stone[0]][stone[1]]
-            for dir in NEIGHBORHOOD:
-                new_stone = (stone[0] + dir[0], stone[1] + dir[1])
-                # Ignore if not in bounds
-                if not self._in_bounds(*new_stone):
-                    continue
-                color = self._board[new_stone[0]][new_stone[1]]
-                if new_stone not in group and color == stone_color:
-                    queue.append(new_stone)
-                    group.add(new_stone)
+            for neighbor in _neighbors(self._board, *stone):
+                color = self._board[neighbor[0]][neighbor[1]]
+                if neighbor not in group and color == stone_color:
+                    queue.append(neighbor)
+                    group.add(neighbor)
 
         num_removed = len(group)
         for stone in group:
@@ -131,14 +191,13 @@ def _can_place(board: list, prior_state: list, x: int, y: int, color: int) -> bo
     # If it doesn't, check if the placement will cause a removal of any 
     # manhattan neighbors
     else:
-        for dir in NEIGHBORHOOD:
-            nabe_stone = (x + dir[0], y + dir[1])
-            # Ignore if out of bounds or same color
-            if not _in_bounds(board, *nabe_stone) or mutable_board[x][y] == mutable_board[nabe_stone[0]][nabe_stone[1]]:
+        for neighbor in _neighbors(board, x, y):
+            # Ignore if same color
+            if mutable_board[x][y] == mutable_board[neighbor[0]][neighbor[1]]:
                 continue
-            if not _has_liberties(mutable_board, *nabe_stone):
+            if not _has_liberties(mutable_board, *neighbor):
                 # If it does, and the move doesn't violate ko, can place. 
-                mutable_board[nabe_stone[0]][nabe_stone[1]] = None
+                mutable_board[neighbor[0]][neighbor[1]] = None
                 if eq(mutable_board, prior_state):
                     # Violates ko
                     return False
@@ -162,21 +221,25 @@ def _has_liberties(board: list, x: int, y: int) -> bool:
     while len(queue) != 0:
         stone = queue.pop(0)
         stone_color = board[stone[0]][stone[1]]
-        for dir in NEIGHBORHOOD:
-            new_stone = (stone[0] + dir[0], stone[1] + dir[1])
-            # Ignore if not in bounds
-            if not _in_bounds(board, *new_stone):
-                continue
-            color = board[new_stone[0]][new_stone[1]]
+        for neighbor in _neighbors(board, *stone):
+            color = board[neighbor[0]][neighbor[1]]
             # Found a liberty
             if color is None:
                 return True
-            elif new_stone not in group and color == stone_color:
-                queue.append(new_stone)
-                group.add(new_stone)
+            elif neighbor not in group and color == stone_color:
+                queue.append(neighbor)
+                group.add(neighbor)
 
     # Found no liberties
     return False
+
+def _neighbors(board: list, x: int, y: int) -> list:
+    nabes = []
+    for dir in NEIGHBORHOOD:
+        new_stone = (x + dir[0], y + dir[1])
+        if _in_bounds(board, *new_stone):
+            nabes.append(new_stone)
+    return nabes
 
 # Returns a deep copy of a board.
 def deepcopy(board: list) -> list:

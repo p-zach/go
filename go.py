@@ -13,6 +13,7 @@ class Go:
         
         self.model = game.Game(self, params.size)
         self.view = graphics.Graphics(self, params.size)
+        self.view.start()
 
     def try_place(self, x: int, y: int) -> bool:
         return self.model.try_place(x, y)
@@ -20,6 +21,14 @@ class Go:
         return self.model.get_turn()
     def get_board(self) -> str:
         return self.model.get_board()
+    def pass_turn(self):
+        if self.model.pass_turn():
+            self.end_game()
+
+    def end_game(self):
+        self.view.freeze()
+        end_game_popup(self.model.score())
+        self.view.destroy()
 
 if __name__ == "__main__":
     Go()

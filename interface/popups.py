@@ -102,3 +102,23 @@ def get_game_params():
         p2 = PlayerType.UNK | PlayerType.SERVER
 
     return GameParams(size, p1, p2)
+
+def end_game_popup(final_info: (int, int, int)):
+    root, frame = create_themed_window("Game complete", width=250, height=100)
+    root.resizable(False, False)
+    
+    # Define quit button and close window behavior
+    def quit():
+        root.destroy()
+        sys.exit(0)
+   
+    # Quit application if window is closed
+    root.protocol('WM_DELETE_WINDOW', quit)
+
+    winner = "Black" if final_info[0] == 0 else "White"
+
+    ttk.Label(frame, text="Game complete!", font=("Arial", 18)).pack(side="top", pady=5)
+    ttk.Label(frame, text=winner+" won.", font=("Arial", 12)).pack(side="top", pady=5)
+    ttk.Label(frame, text=f"Black: {final_info[1]}, White: {final_info[2]}", font=("Arial", 12)).pack(side="top", pady=5)
+
+    root.mainloop()
