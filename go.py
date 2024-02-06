@@ -24,6 +24,8 @@ class Go:
     def pass_turn(self):
         if self.model.pass_turn():
             self.end_game()
+    def just_passed(self):
+        return self.model.just_passed()
 
     def end_game(self):
         self.view.freeze()

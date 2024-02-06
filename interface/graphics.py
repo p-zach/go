@@ -17,6 +17,8 @@ class Graphics(Clickable):
         begin_graphics(self, self.window_width, self.window_height, "Go")
         self.board_size = board_size
 
+        self.turn_text = tk.StringVar(value="Black's turn.")
+
         self.draw_board()
         self.make_buttons()
 
@@ -67,19 +69,22 @@ class Graphics(Clickable):
     def make_buttons(self):
         frame = get_frame()
 
+        turn_label = ttk.Label(frame, textvariable=self.turn_text, font=("Arial", 12), background=SIDEBAR_COLOR)
+        turn_label.place(x=self.window_width+TURN_LABEL_X, y=TURN_LABEL_Y)
+
         passb = ttk.Button(frame, text="Pass", command=self.pass_turn)
         passb.place(x=self.window_width+PASS_BUTTON_X, y=PASS_BUTTON_Y)
         resign = ttk.Button(frame, text="Resign", command=self.request_resign)
         resign.place(x=self.window_width+RESIGN_BUTTON_X, y=self.window_height+RESIGN_BUTTON_Y)
 
-        # forward = ttk.Button(frame, text=">", command=lambda: self.state_change(1, False))
-        # forward.place(x=self.window_width+FORWARD_BUTTON_X, y=self.window_height+FORWARD_BUTTON_Y)
-        # ff = ttk.Button(frame, text=">>", command=lambda: self.state_change(1, True))
-        # ff.place(x=self.window_width+FF_BUTTON_X, y=self.window_height+FF_BUTTON_Y)
-        # backward = ttk.Button(frame, text="<", command=lambda: self.state_change(-1, False))
-        # backward.place(x=self.window_width+BACKWARD_BUTTON_X, y=self.window_height+BACKWARD_BUTTON_Y)
-        # fb = ttk.Button(frame, text="<<", command=lambda: self.state_change(-1, True))
-        # fb.place(x=self.window_width+FB_BUTTON_X, y=self.window_height+FB_BUTTON_Y)
+        forward = ttk.Button(frame, text=">", command=lambda: self.state_change(1, False))
+        forward.place(x=self.window_width+FORWARD_BUTTON_X, y=self.window_height+FORWARD_BUTTON_Y)
+        ff = ttk.Button(frame, text=">>", command=lambda: self.state_change(1, True))
+        ff.place(x=self.window_width+FF_BUTTON_X, y=self.window_height+FF_BUTTON_Y)
+        backward = ttk.Button(frame, text="<", command=lambda: self.state_change(-1, False))
+        backward.place(x=self.window_width+BACKWARD_BUTTON_X, y=self.window_height+BACKWARD_BUTTON_Y)
+        fb = ttk.Button(frame, text="<<", command=lambda: self.state_change(-1, True))
+        fb.place(x=self.window_width+FB_BUTTON_X, y=self.window_height+FB_BUTTON_Y)
 
     def pass_turn(self):
         self.controller.pass_turn()
@@ -104,6 +109,12 @@ class Graphics(Clickable):
         self.drawn_stones.clear()
 
         size, self.turn, board = string_to_board(board_enc)
+        color_text = "Black" if self.turn == 0 else "White"
+        color_text += "'s turn."
+        if self.controller.just_passed():
+            color_text += "\nOpponent passed."
+        self.turn_text.set(color_text)
+
         for x in range(size):
             for y in range(size):
                 color = board[x][y]

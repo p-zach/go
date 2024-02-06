@@ -118,14 +118,21 @@ class Game:
         self._turn = 1 - self._turn
         self._passed_last = True
         return False
+    
+    def just_passed(self):
+        return self._passed_last
 
     # Place a stone at the given coordinates
     def _place(self, x: int, y: int):
+        # Save prior state for ko checking
         self._prior_state = deepcopy(self._board)
+        # Place stone, update board
         self._board[x][y] = self._turn
         self._update_board(x, y)
         self._turn = 1 - self._turn
+        # Keep track of past board states for later examination
         self._states.append(board_to_string(self._size, self._turn, self._board))
+        # Reset pass count for game end checking
         self._passed_last = False
 
     # Update the board in the neighborhood of the stone placed at x, y.
